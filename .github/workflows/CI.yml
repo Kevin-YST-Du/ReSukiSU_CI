@@ -1,4 +1,4 @@
-name: Sync ReSukiSU CI Builds
+name: Sync BakaSU CI Builds
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
 env:
   # 可以在这里手动设置需要检查的最新 N 条 Action 数量
   N_LATEST_RUNS: 50 
-  TARGET_REPO: ReSukiSU/ReSukiSU
+  TARGET_REPO: Baka-SU/BakaSU
 
 jobs:
   fetch-and-release:
@@ -32,7 +32,7 @@ jobs:
               run_id=$(echo "$run" | jq -r '.id')
               run_title=$(echo "$run" | jq -r '.title')
               run_url=$(echo "$run" | jq -r '.url')
-              tag_name="ReSukiSU_${run_id}"
+              tag_name="BakaSU_${run_id}"
               
               echo "----------------------------------------"
               echo "Checking run ID: $run_id (Title: $run_title)"
@@ -88,7 +88,6 @@ jobs:
                   fi
                   
                   # 打包所有 .ko 文件为 lkm-all.zip，并删除原文件
-                  # 使用数组收集 .ko 文件，避免在没有 .ko 文件时报错
                   ko_files=(*.ko)
                   if [ ${#ko_files[@]} -gt 0 ] && [ "${ko_files[0]}" != "*.ko" ]; then
                       echo "   -> 🗜️ Zipping ${#ko_files[@]} .ko files into lkm-all.zip..."
@@ -99,13 +98,12 @@ jobs:
                       echo "   -> ℹ️ No .ko files found to zip."
                   fi
                   
-                  # 检索目标 apk 文件并提取五位版本号
-                  # 使用正则匹配形如 ReSukiSU_*_?????-*.apk 的文件
-                  apk_file=$(find . -maxdepth 1 -name "ReSukiSU*_[0-9][0-9][0-9][0-9][0-9]-*.apk" | head -n 1)
+                  # 检索目标 apk 文件并提取五位版本号（支持 BakaSU 或通用包含5位数字的 APK）
+                  apk_file=$(find . -maxdepth 1 -name "*[0-9][0-9][0-9][0-9][0-9]-*.apk" | head -n 1)
                   
                   if [ -n "$apk_file" ]; then
                       # 提取连续的5位数字
-                      if [[ "$apk_file" =~ _([0-9]{5})-.*\.apk$ ]]; then
+                      if [[ "$apk_file" =~ _([0-9]{5})-.*\.apk$ ]] || [[ "$apk_file" =~ ([0-9]{5}) ]]; then
                           five_digits="${BASH_REMATCH[1]}"
                           release_name="v${five_digits}"
                           
@@ -131,7 +129,7 @@ jobs:
                           echo "❌ Could not extract 5 digits from filename: $apk_file"
                       fi
                   else
-                      echo "❌ Required APK pattern (ReSukiSU_*_XXXXX-universal-release.apk) not found. Skipping release."
+                      echo "❌ Required APK pattern (*_XXXXX-*.apk) not found. Skipping release."
                   fi
                   
                   # 退出文件夹并清理，以免影响下一个循环
